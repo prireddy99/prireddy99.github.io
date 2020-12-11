@@ -72,8 +72,15 @@
               
 
 
-<p><a href="../../../../../projects/project1/">Link to project 1</a> <a href="https://www.google.com">Link to google</a></p>
-<pre class="r"><code>#blahblahblah</code></pre>
+<p><a href="../../../../../project/project1/">Link to project 1</a> <a href="https://www.google.com">Link to google</a></p>
+<pre class="r"><code>library(reticulate)
+use_python(&quot;usr/local/bin/python&quot;)
+hi&lt;-&quot;Hello&quot;</code></pre>
+<pre class="python"><code>hi=&quot;world&quot;
+print(r.hi,hi)</code></pre>
+<pre><code>## Hello world</code></pre>
+<pre class="r"><code>cat(c(hi,py$hi))</code></pre>
+<pre><code>## Hello world</code></pre>
 
             
         <hr>         <div class="related-posts">

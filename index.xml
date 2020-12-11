@@ -14,7 +14,7 @@
       
       <guid>/post/2020/12/11/post-1/</guid>
       <description> Link to project 1 Link to google
-#blahblahblah </description>
+library(reticulate) use_python(&amp;quot;usr/local/bin/python&amp;quot;) hi&amp;lt;-&amp;quot;Hello&amp;quot; hi=&amp;quot;world&amp;quot; print(r.hi,hi) ## Hello world cat(c(hi,py$hi)) ## Hello world </description>
     </item>
     
     <item>

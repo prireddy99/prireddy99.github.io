@@ -7,15 +7,22 @@ categories: []
 tags: []
 description: ''
 ---
-[Link to project 1](/projects/project1/)
+[Link to project 1](/project/project1/)
 [Link to google](https://www.google.com)
 
 
 
 ```{r}
-#blahblahblah
+library(reticulate)
+use_python("usr/local/bin/python")
+hi<-"Hello"
 ```
 
 ```{python}
+hi="world"
+print(r.hi,hi)
+```
 
+```{r}
+cat(c(hi,py$hi))
 ```
