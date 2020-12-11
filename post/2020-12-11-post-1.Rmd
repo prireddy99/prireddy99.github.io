@@ -14,7 +14,6 @@ description: ''
 
 ```{r}
 library(reticulate)
-use_python("usr/local/bin/python")
 hi<-"Hello"
 ```
 
