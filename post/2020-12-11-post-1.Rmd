@@ -1,5 +1,5 @@
 ---
-title: 'Post #1'
+title: 'A Crossover Event (Between R Studio and Python)'
 author: 'Priyanka Reddy'
 date: '2020-12-11'
 slug: post-1
@@ -7,21 +7,26 @@ categories: []
 tags: []
 description: ''
 ---
-[Link to project 1](/project/project1/)
-[Link to google](https://www.google.com)
 
+*As a student studying biology, I haven't dealt much with statistics but when I have, R Studio has been the language I learned to code in. However, in a course called "Computational Biology and Bioinformatics," I've been learning Python and one of the skills I have enjoyed practicing the most is reticulating Python with R.*
 
-
+###Reticulating!
+We can first call the "reticulate" package and define the first part of the text I wish to print. This is all done through an R chunk of code.
 ```{r}
 library(reticulate)
-hi<-"Hello"
+retic<-"Wow! Look at them"
 ```
 
+Next, I can use the same object to define it as the next part of the text and this is done through a chunk of Python code.
 ```{python}
-hi="world"
-print(r.hi,hi)
+retic="working together!"
+print(r.retic,retic)
 ```
 
+Finally, going back to using R code, I can access the Python-defined object and combine both parts of the full text together, even though they were defined using two different language types!
 ```{r}
-cat(c(hi,py$hi))
+cat(c(retic,py$retic))
 ```
+
+*So cool, but even cooler are these Australian sheppard puppies! Please enjoy.*
+![](/post/2020-12-11-post-1_files/aussie puppies.jpg)

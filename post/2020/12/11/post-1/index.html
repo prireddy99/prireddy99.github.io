@@ -7,7 +7,7 @@
     <meta name="author" content="Priyanka Reddy" />
     
     <link rel="shortcut icon" type="image/x-icon" href="../../../../../img/favicon.ico">
-    <title>Post #1</title>
+    <title>A Crossover Event (Between R Studio and Python)</title>
     <meta name="generator" content="Hugo 0.79.0" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="../../../../../css/main.css" />
@@ -54,7 +54,7 @@
       <div class="container">
         <div class="blog-post">
           <h3>
-            <strong><a href="../../../../../post/2020/12/11/post-1/">Post #1</a></strong>
+            <strong><a href="../../../../../post/2020/12/11/post-1/">A Crossover Event (Between R Studio and Python)</a></strong>
           </h3>
         </div>
  
@@ -72,14 +72,21 @@
               
 
 
-<p><a href="../../../../../project/project1/">Link to project 1</a> <a href="https://www.google.com">Link to google</a></p>
+<p><em>As a student studying biology, I haven't dealt much with statistics but when I have, R Studio has been the language I learned to code in. However, in a course called &quot;Computational Biology and Bioinformatics,&quot; I've been learning Python and one of the skills I have enjoyed practicing the most is reticulating Python with R.</em></p>
+<div id="reticulating" class="section level3">
+<h3>Reticulating!</h3>
+<p>We can first call the &quot;reticulate&quot; package and define the first part of the text I wish to print. This is all done through an R chunk of code.</p>
 <pre class="r"><code>library(reticulate)
-hi&lt;-&quot;Hello&quot;</code></pre>
-<pre class="python"><code>hi=&quot;world&quot;
-print(r.hi,hi)</code></pre>
-<pre><code>## Hello world</code></pre>
-<pre class="r"><code>cat(c(hi,py$hi))</code></pre>
-<pre><code>## Hello world</code></pre>
+retic&lt;-&quot;Wow! Look at them&quot;</code></pre>
+<p>Next, I can use the same object to define it as the next part of the text and this is done through a chunk of Python code.</p>
+<pre class="python"><code>retic=&quot;working together!&quot;
+print(r.retic,retic)</code></pre>
+<pre><code>## Wow! Look at them working together!</code></pre>
+<p>Finally, going back to using R code, I can access the Python-defined object and combine both parts of the full text together, even though they were defined using two different language types!</p>
+<pre class="r"><code>cat(c(retic,py$retic))</code></pre>
+<pre><code>## Wow! Look at them working together!</code></pre>
+<p><em>So cool, but even cooler are these Australian sheppard puppies! Please enjoy.</em> <img src="../../../../../post/2020-12-11-post-1_files/aussie%20puppies.jpg" /></p>
+</div>
 
             
         <hr>         <div class="related-posts">

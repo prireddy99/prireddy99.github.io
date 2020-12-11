@@ -8,13 +8,13 @@
     <language>en-US</language>
     <lastBuildDate>Fri, 11 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Post #1</title>
+      <title>A Crossover Event (Between R Studio and Python)</title>
       <link>/post/2020/12/11/post-1/</link>
       <pubDate>Fri, 11 Dec 2020 00:00:00 +0000</pubDate>
       
       <guid>/post/2020/12/11/post-1/</guid>
-      <description> Link to project 1 Link to google
-library(reticulate) hi&amp;lt;-&amp;quot;Hello&amp;quot; hi=&amp;quot;world&amp;quot; print(r.hi,hi) ## Hello world cat(c(hi,py$hi)) ## Hello world </description>
+      <description>As a student studying biology, I haven&#39;t dealt much with statistics but when I have, R Studio has been the language I learned to code in. However, in a course called &amp;quot;Computational Biology and Bioinformatics,&amp;quot; I&#39;ve been learning Python and one of the skills I have enjoyed practicing the most is reticulating Python with R.
+Reticulating! We can first call the &amp;quot;reticulate&amp;quot; package and define the first part of the text I wish to print.</description>
     </item>
     
   </channel>
