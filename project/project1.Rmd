@@ -1,0 +1,169 @@
+---
+title: "Exploratory Data Analysis Project - Priyanka Reddy (pgr363)"
+author: "SDS348 Fall 2020"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: html_document
+---
+As an avid NBA fan and a regular Spotify user, I combined these two interests to choose my datasets for the exploratory data analysis project. Both datasets 'nba' and 'spotify' were found on kaggle.com and contained a common variable 'year' that allowed me to join the two. Their data comes from the range of 2010 to 2019. The first dataset 'nba' contained many categorical and numeric variables but after removing the unwanted variables, I was left using 4 numeric variables and 2 categorical from this dataset. These include the players' names, their team, height, weight, salary, and draft year. From the 'spotify' dataset, after editing it to how I wished, I ended up using 3 categorical and 4 numeric variables from it. These include the top songs of the year, the artist of that song, the top genres, the song's bpm, the song's duration, the song's decibels (dB), and the year that the song was a top Spotify singel. I picked these datasets in particular to see if there was any correlation between an NBA player's draft year and the types of songs that were popular in that year. I also was interested in the team's overall top songs and how that related to the song's genre and artist. I expected to visualize a positive association between later draft years and higher bpm due to the changing music industry over the years. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(cluster)
+library(ggplot2)
+nba <-  read.csv("nba2k20-full.csv")
+spotify <- read.csv("top10s.csv", fileEncoding = "latin1")
+nba <- nba %>% separate(salary,into=c(NA,"salary"), sep=1, convert = T)  
+head(nba)
+head(spotify)
+```
+
+# 1. Tidying: Rearranging Wide/Long
+The datasets were already tidy so I used the wide and long functions in #3 as I made my summary statistics tables.
+
+# 2. Joining/Merging
+```{r}
+nba <- nba %>% rename(year = draft_year) #changing column name from draft_year to year
+
+joindat <- nba %>% inner_join(spotify, by = c(year = "year")) #inner join by year
+
+joindat %>% glimpse() %>% arrange(year)
+
+joindat = subset(joindat, select= -c(rating, jersey, position, b_day, country, draft_round, draft_peak, college, X, nrgy, dnce, live, val, acous, spch, pop)) #removing unwanted columns/variables 
+```
+To join the two datasets, I performed an inner join to keep all of the variables from each dataset while removing NAs from the draft years in the NBA that did not fit the range of top Spotify song data. The resulting dataset was called 'joindat' and the common variable name was 'year.' I eventually edited unwanted variables out later after picking the ones I found ideal for my project. Although the 'nba' dataset only contained 429 observations of 14 variables and the 'spotify' dataset contained 603 observations of 15 variables to begin with, the joined dataset contained about 22,514 observations because there were multiple songs per year which resulted in a single NBA player being listed multiple times to account for each top Spotify song. The final result of 'joindat' was a dataset with 12 variables total, 5 of them being categorical variables (1 of them being 'year') and 7 being numeric. 
+
+# 3. Wrangling 
+```{r}
+joindat <- joindat %>% separate(height,into=c("height.ft","height.m"), sep="/", convert = T) %>% separate(weight,into=c("weight.lbs","weight.kg"), sep="/") #separating height by feet and meters and separating weight by pounds and kilograms and converting to numeric
+
+joindat = subset(joindat, select= -c(height.ft,weight.lbs)) #removing columns of height in feet and weight in pounds
+
+joindat <- joindat %>% separate(weight.kg,into=c("extra","weight.kg"), sep=" ", convert = T) #
+joindat = subset(joindat, select= -c(extra))
+joindat <- joindat %>% mutate(bmi = weight.kg/(height.m^2)) %>% glimpse() #creating new variable 'bmi' by using mutate
+```
+
+```{r}
+joindat %>% filter(salary == max(salary)) #using filter with the variable 'salary' to see which player has the highest salary in the NBA
+```
+
+```{r}
+options(scipen = 999)
+joindat %>% rename_all(function(x) str_replace(x, "_", "")) %>% summarize_if(is.numeric, .funs = list(mean = mean, median = median, sd = sd, var = var, min = min, max = max), na.rm = T) %>% pivot_longer(contains("_")) %>% separate(name, sep = "_", into = c("variable", "stat")) %>% pivot_wider(names_from = "variable", values_from = "value") %>% arrange(stat) #summary stats for all numeric variables
+```
+
+```{r}
+joindat %>% group_by(top.genre) %>% summarize_if(is.numeric, .funs = list(mean = mean, median = median, sd = sd, var = var, min = min, max = max), na.rm = T) %>% pivot_longer(c(-1), values_to = "values", names_to = "stat") %>% separate(stat, sep = "_", into = c("variable", "stat")) %>% pivot_wider(names_from = "variable", values_from = "values") #summary stats when grouped by genre of song (categorical variable)
+```
+
+```{r}
+cormat <- joindat %>% select_if(is.numeric) %>% cor(use="pair")
+cormat #creating correlational matrix for numeric variables
+```
+To create my summary statistic tables for every numeric variable in 'joindat', I had to initially change some of the original variables that were listed as character vectors to numerics. To do so, I used several 'dyplr' functions to manipulate and create variables. I first used 'separate()' to create two variables for each the height and weight of the players based on the unit. Then I used 'select()' to remove the 'height in ft' and 'weight in lbs' variables I had just created. I only needed the 'height in m' and 'weight in kg' variables to create a new variable 'bmi' using the 'mutate()' function. Then, I used the 'filter()' function to determine which NBA player had the highest salary out of all of the observations, which was John Wall. 
+
+I moved onto making sure the rest of my variables that were numbers were set as numerics. Then I used the  'summarize()' function to find the mean, sd, median, var, max, and min of each numeric variable, and placed these statistics in a neat table. The table was tidied by using the 'pivot_longer()' function to reorder the column names and their respective variables into two columns. The 'separate()' function was used to create separate columns for the variable names and summary statistics. I used the 'pivot_wider()' and 'arrange()' functions to shift the rows into columns and arrange the statistic column into alphabetical order. The next step was to create a summary statistic table using the 'group_by()' function to organize it with a categorical variable. I chose the 'top.genre' variable to group by and used the same steps as before to find the statistics and tidy them into a table. Finally, I created a correlation matrix for all the numeric variables in the dataset, in which most of the correlations seem to be extremely weak or negative.
+
+
+# 4. Visualizing
+```{r}
+tidycor <- cormat %>% as.data.frame %>% rownames_to_column("var1") %>% pivot_longer(-1, names_to = "var2", values_to = "correlation")
+tidycor
+```
+
+```{r}
+tidycor %>% ggplot(aes(var1, var2, fill = correlation)) + 
+    geom_tile() + scale_fill_gradient(low = "#E2FDFE", high = "#04A4AA")+ geom_text(aes(label = round(correlation, 2)), color = "black", size = 4) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_fixed()
+```
+In this correlation heatmap of all the numeric variables, there are higher correlations with the darkest blue color and lower correlations with the lightest blue shade. For my dataset, the map shows the highest correlations to be between the height and weight of each player, as can be expected. The next highest correlation is between the weight and bmi of each player, which is also an expected correlation. The rest of the numeric variables have extremely low correlations between them in various pairings, if not negative correlations.
+
+```{r}
+#Plot 1
+joindat %>% ggplot(aes(`salary`, dur, color = bmi)) + geom_point() + scale_color_gradient(low = "#F7DAE3", high = "#3F70FE") + ggtitle("NBA Player Salary vs. Top Song Duration, Colored by BMI") + xlab("NBA Salary") + ylab("Song Duration") + scale_y_continuous(breaks=seq(from=100,to=450, by=25)) + scale_x_log10() + theme_dark()
+```
+Above is a scatterplot that plots NBA players' salaries vs. the top Spotify songs' durations, colored by the players' BMIs. While the correlation from this plot is hard to visualize, it seems that the higher a player's salary, the higher BMI a player might have. However, the BMI plots are scattered throughout the entire graph. Although many songs ranged in the same time for how long they were, some of the longer song durations were correlated with higher NBA salaries, which is an interesting takeaway from this plot. 
+
+
+```{r}
+#Plot 2
+joindat %>% ggplot(aes(x=dB, fill=top.genre)) + geom_bar(aes(y = `team`, position = 'fill') , stat = "summary", fun = mean, na.rm = TRUE) + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + scale_fill_manual("top.genre", values = c("coral","lavender", "pink", "darkseagreen2", "peachpuff1",  "thistle2", "lightgoldenrod1", "cadetblue2", "azure1"), limits = c("acoustic pop","alaska indie", "alternative r&b", "art pop", "atl hip hop",  "australian dance", "australian hip hop", "australian pop", "barbadian pop")) + scale_x_continuous() + ggtitle("Top Spotify Song Decibels for Each NBA Team, Colored by Genre") + xlab("Decibels (dB)") + ylab("NBA Team")
+```
+Above is a barplot showing the decibels of the top Spotify songs that were popular during specific NBA teams drafting years. The bars are colored by the type of genre these songs were from, and there are almost 40 possible genres that did not have occurrences for the data on this graph, which is why they were omitted from the legend. Each bar shows the same association with the amount of decibels and which genre that correlates with. Acoustic pop songs have lower decibels while barbadian pop have the most decibels, along with the rest of the genres falling in between in a consistent order. The NBA team did not seem to make a difference in the amount of decibels, as they all fell in the same sort of range. 
+
+# 5. Dimensionality Reduction
+```{r}
+#scaling numeric variables
+clust_dat <- joindat %>% select(salary, bpm, 
+    bmi) %>% scale %>% as.data.frame
+```
+To cluster the data, I only used the salary, bpm, and bmi numeric variables, which were scaled as seen in the code above.
+
+```{r}
+#finding number of clusters with silhouette method in k-means
+sil_width<-vector() 
+for(i in 2:10){
+kms <- kmeans(clust_dat,centers=i) 
+sil <- silhouette(kms$cluster,dist(clust_dat)) 
+sil_width[i]<-mean(sil[,3]) 
+}
+ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10)
+```
+I used the k-means silhouette clustering method to determine what the greatest width was from the goodness of fit line. It shows that the greatest width was between 2 groups, so two clusters will be used in the rest of the analysis, which will be done with a PAM analysis.
+
+```{r}
+#cluster analysis using PAM
+pam1 <- clust_dat %>% pam(2)
+pam1
+```
+
+```{r}
+#visualizing 2 clusters
+clust_dat <- clust_dat %>% mutate(cluster = as.factor(pam1$clustering))
+ggplot(clust_dat, aes(x = salary, y = bpm, color = cluster)) + 
+    geom_point()
+```
+PAM cluster analysis was done by clustering into 2 clusters and this was saved as 'pam1' in the dataset. I made a scatterplot of the data to show the salary vs. the bpm and colored it by the cluster assignment. There are two apparent clusters seen, in which the first cluster has many more plots in a smaller area, and the second cluster has about the same amount of occurrences but is more spread out throughout the graph.
+
+
+```{r}
+#visualizing the three variables in 3D
+library(plotly)
+clust_dat %>% plot_ly(x = ~salary, y = ~bpm, z = ~bmi, 
+    color = ~cluster, type = "scatter3d", mode = "markers")
+```
+Above is a 3D representation of the clusters in which you can visualize the three numeric variables: bmi, bpm, and salary with the 2 clusters.
+
+```{r}
+#cluster assignments
+library(GGally)
+ggpairs(clust_dat, columns=1:4, aes(color=as.factor(pam1$clustering)))
+```
+A graph above allows us to visualize all pairwise combinations of the 3 variables while still seeing the 2 distinct clusters.
+
+```{r}
+#interpreting fit
+plot(pam1,which=2) 
+```
+I then created a silhouette plot of the PAM clustering, with the average silhouette width being 0.4. This value indicates that the structure is weak and could be artificial.
+
+```{r}
+#summary stats for each numeric variable by the cluster
+clust_dat %>% mutate(cluster = pam1$clustering) %>% 
+    group_by(cluster) %>% rename_all(function(x) str_replace(x, 
+    "_", "")) %>% summarize_if(is.numeric, .funs = list(mean = mean, 
+    median = median, sd = sd), na.rm = T) %>% pivot_longer(contains("_")) %>% 
+    separate(name, sep = "_", into = c("variable", 
+        "stat")) %>% pivot_wider(names_from = "variable", 
+    values_from = "value") %>% arrange(stat)
+```
+Above are the summary statistics of mean, median, and sd for each of the three variables. These statistics were found for both clusters 1 and 2.
+
+Before performing a PAM cluster analysis, I first found that the ideal number of clusters for the three numeric variables I chose (bmi, bpm, and salary) was 2, because the silhouette width that was computed using kmeans was the greatest between two groups (k=2). Then, I proceeded to create a cluster plot to visualize the 2 clusters and how they appeared in comparison to each other. To do so, I plotted the NBA players' salaries with the top Spotify songs' bpms. There are two distinct clusters to visualize, with one being more close together in its observations and one having more spread out occurrences. I found the average silhouette width to be 0.35, which means that the structure of the clusters is weak and that these two clusters could be artificial. Lastly, in analyzing the summary statistics, the mean, median, and sd for all three variables for cluster 1 are positive for the most part and the mean and median for cluster 2 variables seem to be negative. The sd is much higher for the salary in cluster 1 than in cluster 2, which is consistent with what I saw in the cluster plot above. 
+
+

@@ -1,0 +1,21 @@
+---
+title: 'Post #1'
+author: 'Priyanka Reddy'
+date: '2020-12-11'
+slug: post-1
+categories: []
+tags: []
+description: ''
+---
+[Link to project 1](/projects/project1/)
+[Link to google](https://www.google.com)
+
+
+
+```{r}
+#blahblahblah
+```
+
+```{python}
+
+```

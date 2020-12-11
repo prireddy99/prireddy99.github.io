@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Chris Turner</title>
+    <link>/</link>
+    <description>Recent content on Chris Turner</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    <lastBuildDate>Fri, 11 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Post #1</title>
+      <link>/post/2020/12/11/post-1/</link>
+      <pubDate>Fri, 11 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/12/11/post-1/</guid>
+      <description> Link to project 1 Link to google
+#blahblahblah </description>
+    </item>
+    
+    <item>
+      <title>Exploratory Data Analysis Project - Priyanka Reddy (pgr363)</title>
+      <link>/project/project1/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project1/</guid>
+      <description>As an avid NBA fan and a regular Spotify user, I combined these two interests to choose my datasets for the exploratory data analysis project. Both datasets &#39;nba&#39; and &#39;spotify&#39; were found on kaggle.com and contained a common variable &#39;year&#39; that allowed me to join the two. Their data comes from the range of 2010 to 2019. The first dataset &#39;nba&#39; contained many categorical and numeric variables but after removing the unwanted variables, I was left using 4 numeric variables and 2 categorical from this dataset.</description>
+    </item>
+    
+    <item>
+      <title>Project 2: Modeling, Testing, and Predicting - Priyanka Reddy (pgr363)</title>
+      <link>/project/project2/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project2/</guid>
+      <description>0. Introducing Dataset and Variables The dataset I chose for this project is &#39;indianfood&#39;, which was obtained from the Kaggle site. Indian food is a topic in which I have limited knowledge about already, being of full Indian nationality, and this dataset details Indian history through its cuisine. This dataset compiles 255 traditional Indian dishes, along with their unique characteristics, origins, ingredients, etc. which are fully described in the explanation of the variables below.</description>
+    </item>
+    
+    <item>
+      <title>Projects</title>
+      <link>/projects/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/projects/</guid>
+      <description> Check out some of my coding projects below:
+ Wrangling &amp;amp; Exploratory Data Analysis
+ Modeling, Inference, Prediction
+  -- </description>
+    </item>
+    
+    <item>
+      <title>Resume</title>
+      <link>/resume/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/resume/</guid>
+      <description>    </description>
+    </item>
+    
+  </channel>
+</rss>

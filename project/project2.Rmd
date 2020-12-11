@@ -1,0 +1,373 @@
+---
+title: "Project 2: Modeling, Testing, and Predicting - Priyanka Reddy (pgr363)"
+author: "SDS348 Fall 2020"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  # this hook is used only when the linewidth option is not NULL
+  if (!is.null(n <- options$linewidth)) {
+    x = knitr:::split_lines(x)
+    # any lines wider than n should be wrapped
+    if (any(nchar(x) > n)) x = strwrap(x, width = n)
+    x = paste(x, collapse = '\n')
+  }
+  hook_output(x, options)
+})
+
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE,fig.align="center",warning=FALSE,message=FALSE,fig.width=8, fig.height=5, linewidth=60)
+options(tibble.width = 100,width = 100)
+library(tidyverse)
+```
+
+# 0. Introducing Dataset and Variables
+
+The dataset I chose for this project is 'indianfood', which was obtained from the Kaggle site. Indian food is a topic in which I have limited knowledge about already, being of full Indian nationality, and this dataset details Indian history through its cuisine. This dataset compiles 255 traditional Indian dishes, along with their unique characteristics, origins, ingredients, etc. which are fully described in the explanation of the variables below. 
+
+Data from: https://www.kaggle.com/nehaprabhavalkar/indian-food-101
+
+The variables in this dataset, after tidying, are the name of the dish, the diet of the dish, each dish's prep time and cook time, the type of course a dish is, it's flavor profile, what Indian state the dish originates from, and which region of India the dish is from. All of these variables are categorical response variables, except for the prep time and cook time, both of which are numerical. The dataset did not include a binary variable so I chose the "diet" vairable to create a binary variable, with a vegetarian dish being "1" and a non-vegetarian dish being "0."
+
+```{r}
+library(tidyverse)
+library(sandwich)
+library(lmtest)
+library(cluster)
+library(ggplot2)
+
+#reading in dataset
+indianfood <- read.csv("indian_food.csv") 
+#tidying dataset
+indianfood <- indianfood %>% rename(dish = name, flavor = flavor_profile)
+indianfood <- indianfood %>% select(dish, diet, prep_time, cook_time, course, flavor, state, region) %>% na.omit()
+#creating binary variable
+indianfood <- indianfood %>% mutate(y = ifelse(diet=="vegetarian", 1, 0))
+```
+
+# 1. MANOVA/ANOVA
+
+Perform a MANOVA testing whether any of your numeric variables (or a subset of them, if including them all is unreasonable or doesn't make sense) show a mean difference across levels of one of your categorical variables (3). If they do, perform univariate ANOVAs to find response(s) showing a mean difference across groups (3), and perform post-hoc t tests to find which groups differ (3). Discuss the number of tests you have performed, calculate the probability of at least one type I error (if unadjusted), and adjust the significance level accordingly (bonferroni correction) before discussing significant differences (3). Briefly discuss MANOVA assumptions and whether or not they are likely to have been met (no need for anything too in-depth) (2).
+
+```{r}
+#testing if assumptions are violated
+library(rstatix)
+
+indianfood$course <- c("dessert", "main course", "snack")
+
+group <- indianfood$course
+DVs <- indianfood %>% select(prep_time, cook_time) 
+
+#Test multivariate normality for each group (null: assumption met)
+sapply(split(DVs,group), mshapiro_test)
+
+#Optionally View covariance matrices for each group
+lapply(split(DVs,group), cov)
+```
+
+```{r}
+man1<-manova(cbind(prep_time,cook_time)~course, data=indianfood)
+summary(man1) #MANOVA
+```
+
+```{r}
+summary.aov(man1) #univariate ANOVAs from MANOVA
+
+indianfood%>%group_by(course)%>%summarize(mean(prep_time),mean(cook_time))
+```
+
+```{r}
+#post-hoc t tests
+pairwise.t.test(indianfood$prep_time, indianfood$course, p.adj="none")
+```
+
+```{r}
+#type I error
+1-0.95^7
+```
+
+```{r}
+#bonferroni correction
+pairwise.t.test(indianfood$prep_time, indianfood$course, p.adj="bonferroni")
+
+#bonferroni adjustment significance level
+0.05/7
+```
+First, assumptions for MANOVA were tested by testing multivariate normality for each group (excluding the starter course since it only contains 2 observations). All of the p-values were less than 0.05, meaning normality and homogeneity assumptions were most likely not met. A one-way MANOVA was conducted to determine the effect of the Indian food course (snack, starter, main course, dessert) on two dependent, numeric variables (prep time and cook time). Significant differences were found among the four Indian food courses for at least one of the numeric variables, Pillai trace = 0.072145, pseudo F(6,502)=3.13, p<0.01. Univariate ANOVAs for each numeric variable were conducted as follow-up tests to the MANOVA. The univariate ANOVA for one dependent numeric variable, prep time, was also significant, F(3,251)=4.433, p<0.01. A post-hoc t test was performed on this ANOVA to determine which courses differed based on prep time. 1 MANOVA, 2 ANOVAs, and 4 t tests were conducted, so 7 tests in total. Using this value, I found the Type I error rate to be 0.3016627. Using the Bonferroni adjusted significance level of α = 0.05/7 = 0.007142857 to control for the Type I error rate, a post hoc analysis could be performed. None of the courses were found to be significantly different from each other in terms of prep time after adjusting for multiple comparisons (bonferroni correction).
+
+# 2. Randomization Test
+
+Perform some kind of randomization test on your data (that makes sense). The statistic can be anything you want (mean difference, correlation, F-statistic/ANOVA, chi-squared), etc. State null and alternative hypotheses, perform the test, and interpret the results (7). Create a plot visualizing the null distribution and the test statistic (3).
+
+```{r}
+#HO/Null: Mean cook time is the same for vegetarian and non-vegetarian dishes.
+#HA/Alternative: Mean cook times are different for vegetarian and non-vegetarian dishes.
+
+#finding difference in means
+set.seed(348)
+indianfood %>% group_by(diet) %>% summarize(means = mean(cook_time)) %>% summarize(diff(means))
+```
+
+```{r}
+#randomization test
+rand_dist <- vector() 
+for (i in 1:5000) {
+new <- data.frame(cook_time = sample(indianfood$cook_time), diet = indianfood$diet) 
+rand_dist[i] <- mean(new[new$diet == "vegetarian", ]$cook_time) - mean(new[new$diet == "non vegetarian", ]$cook_time)
+}
+```
+
+```{r}
+#interpretting
+mean(rand_dist > 9.779524	 | rand_dist < -9.779524)
+```
+
+```{r}
+t.test(data = indianfood, cook_time ~ diet)
+```
+```{r}
+#plot
+{
+  hist(rand_dist,main="",ylab=""); abline(v = c(-9.779524, 9.779524),col="red")
+}
+```
+A randomization test to determine the difference in means of cook times between vegetarian and non-vegetarian dishes is conducted. After running the test, the difference in means is found to be 9.779524 minutes. We get a p value of 0.158, which is not lower than 0.05, concluding that the difference in cook time is not significant between veg and non-veg dishes, meaning our null hypothesis is NOT rejected. To confirm our findings, a Welch's t test was performed and a smaller p value was found, but it confirms our first conclusion because it is still higher than 0.05.
+
+# 3. Linear Regression Model
+
+Build a linear regression model predicting one of your response variables from at least 2 other variables, including their interaction. Mean-center any numeric variables involved in the interaction.
+
+    - Interpret the coefficient estimates (do not discuss significance) (10)
+    - Plot the regression using `ggplot()` using geom_smooth(method="lm"). If your interaction is numeric by numeric, refer to code in the slides to make the plot or check out the `interactions` package, which makes this easier. If you have 3 or more predictors, just chose two of them to plot for convenience. (8)
+    - Check assumptions of linearity, normality, and homoskedasticity either graphically or using a hypothesis test (4)
+    - Regardless, recompute regression results with robust standard errors via `coeftest(..., vcov=vcovHC(...))`. Discuss significance of results, including any changes from before/after robust SEs if applicable. (8)
+    - What proportion of the variation in the outcome does your model explain? (4)
+    
+```{r}
+#mean centering numeric variables
+indianfood$prep_time_c <- (indianfood$prep_time - mean(indianfood$prep_time, 
+    na.rm = T))
+indianfood$cook_time_c <- (indianfood$cook_time - mean(indianfood$cook_time, 
+    na.rm = T))
+
+#linear reg model
+fit <- lm(prep_time_c ~ cook_time_c * diet, data = indianfood) 
+summary(fit)
+```
+```{r}
+#plot
+ggplot(indianfood, aes(x = cook_time_c, y = prep_time_c, group = diet)) + geom_point(aes(color=diet)) + geom_smooth(method = "lm", aes(color=diet))
+```
+```{r}
+#check assumptions
+resids<-fit$residuals
+fitvals<-fit$fitted.values
+ggplot()+geom_point(aes(fitvals,resids))+geom_hline(yintercept=0, color='red') #linearity
+```
+```{r}
+bptest(fit) #homoskedasticity
+```
+```{r}
+ks.test(resids, "pnorm", mean=0, sd(resids)) #normality
+```
+```{r}
+#robust SE
+coeftest(fit, vcov = vcovHC(fit))
+```
+```{r}
+#prop of variation in outcome (R^2)
+summary(fit) #0.0218
+```
+Controlling for diet, for every one unit increase in cook_time_c, prep_time_c increases by 0.45896 minutes (non significant, t=0.901, df=251, p=0.369). Controlling for cook_time_c, vegetarian dishes have a prep time that is 0.34674 minutes greater than non-vegetarian dishes (not significant, t=0.023, df=251, p=0.981). The slope for cook_time_c on prep_time_c is 0.25194 minutes lower for vegetarian dishes compared to non-vegetarian dishes (interaction is not significant, t=-0.486, df=251, p=0.627). The assumptions of linearity, homoskedasticity, and normality are met because the p values are all greater than 0.05. When recomputing the regression results with robust standard errors, there is still no significance in any of the interactions, and therefore no changes in significance after the robust SEs. The proportion of variation in the response variable explained by the overall model is signified by Rˆ2, which is 0.0218, or 0.01011 if we account for a penalty with each extra explanatory variable. 
+
+# 4. Bootstrapped Regression Model
+
+Rerun same regression model (with the interaction), but this time compute bootstrapped standard errors (either by resampling observations or residuals). Discuss any changes you observe in SEs and p-values using these SEs compared to the original SEs and the robust SEs)
+
+```{r}
+#linear reg model
+fit<-lm(prep_time_c ~ cook_time_c * diet, data = indianfood) 
+summary(fit)
+```
+```{r}
+#bootstrapping residuals
+set.seed(348)
+resids<-fit$residuals 
+fitted<-fit$fitted.values 
+resid_resamp<-replicate(5000,{
+new_resids<-sample(resids,replace=TRUE) 
+indianfood$new_y<-fitted+new_resids
+fit2 <- lm(new_y~cook_time_c*diet,data=indianfood)
+coef(fit2) 
+})
+#estimated SEs
+resid_resamp%>%t%>%as.data.frame%>%summarize_all(sd)
+```
+```{r}
+#normal SEs
+coeftest(fit)
+```
+
+```{r}
+#robust SEs
+coeftest(fit, vcov=vcovHC(fit))
+```
+The bootstrap SEs for the explanatory variables are lower values than the normal and robust SEs, for the most part. The bootstrapped SE for cook_time_c is 0.5004, 14.9191 for dietvegetarian, and 0.5087 for their interaction, which are all three lower than the original SEs. The bootstrapped SE for cook_time_c is interestingly higher than the robust SE for cook_time_c of 0.3934. However, the bootstrapped SEs for dietvegetarian and the interaction continue to be lower than the robust SEs for those categories. The intercept SE from the bootstrap model is 13.9157, which is lower than the intercept SE of the original model, but slightly higher than the robust SE. This means the p-values for the bootstrapped model must be lower than the original model's p-values of 0.3687 (not significant) for cook_time_c, 0.9815 (not significant) for dietvegetarian, and 0.6275 (not significant) for their interaction.
+
+# 5. Logistic Regression Model
+
+Fit a logistic regression model predicting a binary variable (if you don't have one, make/get one) from at least two explanatory variables (interaction not necessary). 
+
+    - Interpret coefficient estimates in context (10)
+    - Report a confusion matrix for your logistic regression (2)
+    - Compute and discuss the Accuracy, Sensitivity (TPR), Specificity (TNR), Precision (PPV), and AUC of your model (5)
+    - Using ggplot, make a density plot of the log-odds (logit) colored/grouped by your binary outcome variable (3)
+    - Generate an ROC curve (plot) and calculate AUC (either manually or with a package); interpret (5)
+    
+```{r}
+#logistic reg model
+fit3 <- glm(y ~ prep_time_c + cook_time_c, data = indianfood, family = binomial(link = "logit"))
+coeftest(fit3)
+exp(coef(fit3))
+```
+```{r}
+#conf matrix
+indianfood<-indianfood%>%mutate(prob=predict(fit3, type="response"), prediction=ifelse(prob>.5,1,0))
+classify<-indianfood%>%transmute(prob,prediction,truth=y)
+table(prediction=classify$prediction,truth=classify$truth)%>%addmargins()
+```
+
+```{r}
+# function for classification diagnostics
+proba = predict(fit, type = "response")
+class_diag <- function(probs, truth) {
+    # CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV
+    tab <- table(factor(probs > 0.5, levels = c("FALSE", "TRUE")), truth)
+    acc = sum(diag(tab))/sum(tab) 
+    sens = tab[2, 2]/colSums(tab)[2] 
+    spec = tab[1, 1]/colSums(tab)[1] 
+    ppv = tab[2, 2]/rowSums(tab)[2] 
+    if (is.numeric(truth) == FALSE & is.logical(truth) == FALSE)
+      truth <- as.numeric(truth) - 1
+    # CALCULATE EXACT AUC
+    ord <- order(probs, decreasing = TRUE)
+    probs <- probs[ord]
+    truth <- truth[ord]
+    TPR = cumsum(truth)/max(1, sum(truth))
+    FPR = cumsum(!truth)/max(1, sum(!truth))
+    dup <- c(probs[-1] >= probs[-length(probs)], FALSE)
+    TPR <- c(0, TPR[!dup], 1)
+    FPR <- c(0, FPR[!dup], 1)
+    n <- length(TPR)
+    auc <- sum(((TPR[-1] + TPR[-n])/2) * (FPR[-1] - FPR[-n]))   
+    data.frame(acc, sens, spec, ppv, auc)
+}
+# results
+class_diag(proba, indianfood$y)
+```
+
+```{r}
+#ggplot
+indianfood$logit<-predict(fit3,type="link")
+indianfood$y1<-as.factor(indianfood$y) 
+indianfood %>% group_by(y1) %>% ggplot()+geom_density(aes(logit,color=y1,fill=y1))
+```
+
+```{r}
+#ROC and AUC
+library(plotROC)
+ROCplot <- ggplot(indianfood) + geom_roc(aes(d = y, m = prob), n.cuts = 0)
+ROCplot
+```
+
+```{r}
+#calc AUC 
+calc_auc(ROCplot)
+```
+Controlling for cook_time_c, for every 1 minute increase in prep_time_c, the probabiltiy of a dish being vegetarian increases by 0.9992 times. Controlling for prep_time_c, for every 1 minute increase in cook_time_c, the probability of a dish being vegetarian increases by 1.0174 times. We can see from the confusion matrix that was reported that the accuracy is 0.3843, the proportion of correctly classified dishes, the sensitivity (TPR) is 0.3451, the rate of true positives, the specificity (TNR) is 0.6897, the rate of true negatives, and the PPV is 0.8966, giving the proportion of dishes classified as vegetarian to those that actually are vegetarian. These diagnostics are not too great, and the ROC plot confirms that the predicting level of our data is "bad", because the shape of the plot is far from a right angle and the AUC is calculated to be 0.5902. We can conclude that the diet status of an Indian dish is badly predicted from prep_time_c and cook_time_c. 
+
+# 6. Logistic Regression Model (All Variables)
+
+Perform a logistic regression predicting the same binary response variable from *ALL* of the rest of your variables (the more, the better!) 
+
+    - Fit model, compute in-sample classification diagnostics (Accuracy, Sensitivity, Specificity, Precision, AUC), and interpret (5)
+    - Perform 10-fold (or repeated random sub-sampling) CV with the same model and report average out-of-sample classification diagnostics (Accuracy, Sensitivity, Specificity, Precision, and AUC); interpret AUC and compare with the in-sample metrics (10)
+    - Perform LASSO on the same model/variables. Choose lambda to give the simplest model whose accuracy is near that of the best (i.e., `lambda.1se`). Discuss which variables are retained. (5)
+    - Perform 10-fold CV using only the variables lasso selected: compare model's out-of-sample AUC to that of your logistic regressions above (5)
+    
+
+
+```{r}
+#log reg model
+fit4 <- glm(y ~ course + flavor + state + region, data = indianfood, family = binomial(link = "logit"))
+summary(fit4)
+exp(coef(fit4))
+```
+
+```{r}
+library(glmnet)
+#in-sample classification diagnostics
+prob1 <- predict(fit4, data = "response")
+class_diag(prob1, indianfood$y)
+```
+
+```{r}
+#10 fold CV
+set.seed(1234)
+k = 10
+data <- indianfood[sample(nrow(indianfood)), ]
+folds <- cut(seq(1:nrow(indianfood)), breaks = k, labels = F)
+diags <- NULL
+for (i in 1:k) {
+    train <- data[folds != i, ]
+    test <- data[folds == i, ]
+    truth1 <- test$y
+    fit5 <- glm(y ~ course + flavor + state 
+                + region, data = train,
+        family = "binomial")
+    fit5$xlevels[["flavor"]] <- union(fit5$xlevels[["flavor"]], levels(train$flavor))
+    fit5$xlevels[["state"]] <- union(fit5$xlevels[["state"]], levels(train$state))
+    fit5$xlevels[["region"]] <- union(fit5$xlevels[["region"]], levels(train$region))
+    prob2 <- predict(fit5, newdata = test, type = "response")
+    diags <- rbind(diags, class_diag(prob2, truth1))
+}
+summarize_all(diags, mean) #out-of-sample classifications
+```
+
+```{r}
+#LASSO
+library(glmnet)
+set.seed(1234)
+y <- as.matrix(indianfood$y)
+preds <- model.matrix(y ~ course + flavor + state + region, data = indianfood)[, -1]
+head(preds)
+```
+
+```{r}
+cv <- cv.glmnet(preds, y, family = "binomial")
+lasso_fit <- glmnet(preds, y, family = "binomial", lambda = cv$lambda.1se)
+coef(lasso_fit)
+```
+
+```{r}
+#CV with LASSO
+set.seed(1234)
+k = 10
+data <- indianfood[sample(nrow(indianfood)), ]
+folds <- cut(seq(1:nrow(indianfood)), breaks = k, labels = F)
+diags <- NULL
+for (i in 1:k) {
+    train2 <- data[folds != i, ]
+    test2 <- data[folds == i, ]
+    truth2 <- test2$y
+    fit6 <- glm(y ~ cook_time_c, data = train2, 
+        family = "binomial")
+    prob3 <- predict(fit6, newdata = test2, type = "response")
+    diags <- rbind(diags, class_diag(prob3, truth2))
+}
+summarize_all(diags, mean)
+```
+From our logistic regression conducted to predict if a dish is vegetarian or non-vegetarian based on the remaining response variables (course, flavor, state, and region), only one result is significant. That is if the flavor of the dish is spicy, the probability of a dish being vegetarian increases by a factor of 0.1157. From the calculation of in-sample classification diagnostics, the accuracy is 0.9529, the sensitivity (TPR) is 0.9823, the specificity (TNR) is 0.7241, the PPV is 0.9652, and the AUC is 0.9741, which is a "great" predicting level. After conducting a 10 fold CV, the out-of-sample classification diagnostics are found to be similar for some and lower for others; accuracy = 0.8389, sensitivity (TPR) = 0.8765, specificity (TNR) = 0.56, PPV = 0.9349, and the AUC is 0.7068, which is a "fair" predicting level. After performing a LASSO, the only retained variable is the "main course" and when a 10 fold CV with the LASSO's selected variable is conducted, an AUC of 0.5832 is calculated. This AUC is much lower than the previous logistic regression's AUCs, predicting at a "bad" level. It seems from the data overall, an Indian dish's status of vegetarian or non-vegetarian based on the course, flavor, state, and region, can be best predicted with an in-sample logistic regression model, rather than a LASSO.
